@@ -20,8 +20,6 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 
-import dayjs from "@calcom/dayjs";
-
 type ShortcutArrayType = {
   shortcuts?: string[];
 };
@@ -233,7 +231,7 @@ function useEventTypesAction(): void {
   const router = useRouter();
   const { data } = trpc.viewer.eventTypes.getEventTypesFromGroup.useInfiniteQuery(
     {
-      limit: 100,
+      limit: 10,
       group: { teamId: null, parentId: null },
     },
     {
@@ -261,46 +259,7 @@ function useEventTypesAction(): void {
     actions = eventTypeActions;
   }
 
-  useRegisterActions(actions, [data]);
-}
-
-function useUpcomingBookingsAction(): void {
-  const router = useRouter();
-
-  const { data } = trpc.viewer.bookings.get.useQuery(
-    {
-      filters: {
-        status: "upcoming",
-        afterStartDate: dayjs().startOf("day").toISOString(),
-      },
-      limit: 100,
-    },
-    {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-    }
-  );
-
-  const bookingActions: Action[] = useMemo(() => {
-    if (!data?.bookings) return [];
-
-    return data.bookings.map((booking) => {
-      const startTime = dayjs(booking.startTime);
-      const formattedDate = startTime.format("MMM D");
-      const formattedTime = startTime.format("h:mm A");
-      const attendeeNames = (booking.attendees ?? []).map((a) => a.name).join(" ");
-
-      return {
-        id: `booking-${booking.uid}`,
-        name: `${booking.title} - ${formattedDate} ${formattedTime}`,
-        section: { name: "upcoming", priority: 1 },
-        keywords: `booking ${booking.title} ${attendeeNames}`,
-        perform: () => router.push(`/booking/${booking.uid}`),
-      };
-    });
-  }, [data?.bookings, router]);
-
-  useRegisterActions(bookingActions, [bookingActions]);
+  useRegisterActions(actions);
 }
 
 const KBarRoot = ({ children }: { children: ReactNode }): JSX.Element => {
@@ -320,7 +279,6 @@ function CommandKey(): JSX.Element {
 const KBarContent = (): JSX.Element => {
   const { t } = useLocale();
   useEventTypesAction();
-  useUpcomingBookingsAction();
 
   return (
     <KBarPortal>
